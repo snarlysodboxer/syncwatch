@@ -1,0 +1,221 @@
+:root {
+  /* Status colors from the Argo CD UI palette */
+  --c-success: #18be94;
+  --c-warning: #f4c030;
+  --c-failed: #e96d76;
+  --c-running: #0dadea;
+  --c-suspended: #766f94;
+  --c-unknown: #ccd6dd;
+
+  --bg: #0f1720;
+  --panel: #17222e;
+  --panel-raised: #1d2a38;
+  --border: #263547;
+  --text: #e6edf3;
+  --muted: #91a3b3;
+  --accent: #18be94;
+  --radius: 10px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+a { color: var(--muted); }
+
+/* ---- header ---- */
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 24px;
+  background: linear-gradient(180deg, #16222f 0%, #121c27 100%);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.brand { display: flex; align-items: center; gap: 12px; }
+.logo { height: 34px; width: auto; }
+.brand-text h1 { margin: 0; font-size: 18px; font-weight: 650; letter-spacing: 0.2px; }
+.subtitle { color: var(--muted); font-size: 12px; }
+
+.header-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+
+.summary { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip {
+  padding: 3px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.chip.good { color: var(--c-success); border-color: color-mix(in srgb, var(--c-success) 40%, transparent); }
+.chip.warn { color: var(--c-warning); border-color: color-mix(in srgb, var(--c-warning) 40%, transparent); }
+.chip.stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: default;
+  border-color: color-mix(in srgb, currentColor 40%, transparent);
+}
+.chip.stat svg { width: 12px; height: 12px; fill: currentColor; }
+
+.conn { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted); }
+.conn-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.conn-live .conn-dot { background: var(--c-success); box-shadow: 0 0 6px var(--c-success); }
+.conn-connecting .conn-dot,
+.conn-down .conn-dot { background: var(--c-warning); animation: pulse 1.2s ease-in-out infinite; }
+
+@keyframes pulse { 50% { opacity: 0.3; } }
+
+/* ---- list ---- */
+
+main { max-width: 1200px; margin: 22px auto; padding: 0 24px; }
+
+.list-head, .app-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.1fr) 150px 160px minmax(240px, 2fr) 96px;
+  gap: 14px;
+  align-items: center;
+  padding: 10px 16px;
+}
+
+.list-head {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  padding-bottom: 6px;
+}
+.col-toggle { text-align: center; }
+
+.app-list { display: flex; flex-direction: column; gap: 8px; }
+
+.app-row {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-height: 58px;
+  transition: border-color 0.15s ease;
+}
+.app-row:hover { border-color: #34495f; }
+.app-row.paused {
+  border-left: 3px solid var(--c-warning);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--c-warning) 6%, var(--panel)) 0%, var(--panel) 30%);
+}
+.app-row.pending { opacity: 0.55; pointer-events: none; }
+
+.app-name { font-weight: 600; font-size: 14.5px; }
+.app-project { color: var(--muted); font-size: 12px; }
+
+/* ---- status cells ---- */
+
+.status { display: flex; align-items: center; gap: 8px; }
+.status svg { width: 15px; height: 15px; flex: none; fill: currentColor; }
+svg.spin { animation: rotate 1s linear infinite; }
+@keyframes rotate { to { transform: rotate(360deg); } }
+
+.st-success { color: var(--c-success); }
+.st-warning { color: var(--c-warning); }
+.st-failed { color: var(--c-failed); }
+.st-running { color: var(--c-running); }
+.st-suspended { color: var(--c-suspended); }
+.st-unknown { color: var(--c-unknown); }
+.status .label { color: var(--text); }
+
+/* ---- note ---- */
+
+.note-cell { min-width: 0; }
+.note-input {
+  width: 100%;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--panel-raised);
+  color: var(--text);
+  font: inherit;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.note-input::placeholder { color: #5d7185; }
+.note-input:focus { border-color: var(--accent); }
+.note-meta { color: var(--muted); font-size: 11.5px; margin-top: 4px; padding-left: 2px; }
+.note-none { color: #4a5c6e; }
+
+/* ---- toggle switch ---- */
+
+.toggle-cell { display: flex; justify-content: center; }
+.switch {
+  position: relative;
+  width: 42px;
+  height: 23px;
+  flex: none;
+  cursor: pointer;
+}
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: #3a4b5f;
+  transition: background 0.18s ease;
+}
+.slider::before {
+  content: "";
+  position: absolute;
+  width: 17px;
+  height: 17px;
+  left: 3px;
+  top: 3px;
+  border-radius: 50%;
+  background: #cfd9e2;
+  transition: transform 0.18s ease;
+}
+.switch input:checked + .slider { background: var(--c-success); }
+.switch input:checked + .slider::before { transform: translateX(19px); background: #fff; }
+.switch input:focus-visible + .slider { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ---- misc ---- */
+
+.empty { text-align: center; color: var(--muted); padding: 40px; }
+
+footer {
+  max-width: 1200px;
+  margin: 30px auto 18px;
+  padding: 0 24px;
+  color: #4a5c6e;
+  font-size: 11px;
+}
+footer a { color: #5d7185; }
+
+.toast {
+  position: fixed;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2a1c1e;
+  border: 1px solid var(--c-failed);
+  color: var(--text);
+  padding: 10px 18px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  z-index: 20;
+}
+
+@media (max-width: 900px) {
+  .list-head { display: none; }
+  .list-head, .app-row { grid-template-columns: 1fr 1fr; }
+  .note-cell { grid-column: 1 / -1; }
+}

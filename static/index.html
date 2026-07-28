@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SyncWatch · ArgoCD auto-sync</title>
+  <link rel="icon" href="argo.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img src="argo.svg" alt="Argo" class="logo">
+      <div class="brand-text">
+        <h1>SyncWatch</h1>
+        <span class="subtitle">ArgoCD auto-sync</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div id="summary" class="summary"></div>
+      <div id="conn" class="conn conn-connecting" title="Connection to SyncWatch">
+        <span class="conn-dot"></span><span id="conn-label">Connecting</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="list-head">
+      <div>Application</div>
+      <div>Sync</div>
+      <div>Health</div>
+      <div>Note</div>
+      <div class="col-toggle">Auto-sync</div>
+    </div>
+    <div id="apps" class="app-list"></div>
+    <div id="empty" class="empty" hidden>No ArgoCD applications found.</div>
+  </main>
+
+  <footer>
+    Status icons: <a href="https://fontawesome.com/license/free" rel="noopener">Font Awesome Free</a> (CC BY 4.0),
+    as used by the <a href="https://argo-cd.readthedocs.io/" rel="noopener">Argo CD</a> UI.
+  </footer>
+
+  <div id="toast" class="toast" hidden></div>
+  <script src="app.js"></script>
+</body>
+</html>

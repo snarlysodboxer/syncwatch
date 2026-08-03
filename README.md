@@ -1,5 +1,7 @@
 # SyncWatch
 
+<img src="static/favicon.svg" align="right" width="110" alt="SyncWatch logo">
+
 A tiny live dashboard for ArgoCD auto-sync state.
 
 ## Why
@@ -118,7 +120,5 @@ Apache License 2.0 — see [LICENSE](LICENSE).
 Status icons are [Font Awesome Free](https://fontawesome.com/license/free)
 5.15.4 solid glyphs (CC BY 4.0) — the same glyphs the
 [Argo CD](https://argo-cd.readthedocs.io/) UI uses, in Argo CD's status
-color palette. The Argo logo (`static/argo.svg`) is from the
-[argoproj/argo-cd](https://github.com/argoproj/argo-cd) repository and is a
-trademark of The Linux Foundation / CNCF, used here to identify the Argo CD
-instance this tool operates on.
+color palette. The SyncWatch logo (`static/favicon.svg`) is original to this
+project.

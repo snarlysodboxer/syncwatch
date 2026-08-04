@@ -96,7 +96,8 @@ function buildRow(app) {
   noteInput.addEventListener("blur", () => {
     const current = state.get(app.name);
     if (current && noteInput.value !== current.note) {
-      post(`/api/apps/${encodeURIComponent(app.name)}/note`, { note: noteInput.value });
+      post(`/api/apps/${encodeURIComponent(app.name)}/note`, { note: noteInput.value })
+        .catch(() => {});
     }
     render(); // apply any reorder deferred while typing
   });
@@ -224,11 +225,25 @@ function clearPending(name) {
 }
 
 async function post(url, body) {
-  const resp = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  let resp;
+  try {
+    resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      redirect: "manual",
+    });
+  } catch (err) {
+    toast("request failed — checking connection");
+    checkConnection();
+    throw err;
+  }
+  if (resp.type === "opaqueredirect") {
+    // The auth session expired and the proxy answered with a redirect to
+    // the identity provider — reload the page through the login flow.
+    checkConnection();
+    throw new Error(`POST ${url}: auth redirect`);
+  }
   if (!resp.ok) {
     toast(`request failed: ${(await resp.text()).trim() || resp.status}`);
     throw new Error(`POST ${url}: ${resp.status}`);
@@ -248,49 +263,91 @@ function toast(msg) {
 
 const connEl = document.getElementById("conn");
 const connLabel = document.getElementById("conn-label");
-let esErrors = 0;
+const STALE_AFTER_MS = 70000; // the server pings every 25s; 2+ missed = dead
+let es;
+let lastEventAt = Date.now();
+let probing = false;
 
 function setConn(cls, label) {
   connEl.className = `conn conn-${cls}`;
   connLabel.textContent = label;
+  document.body.classList.toggle("disconnected", cls === "down");
 }
 
+function touch() { lastEventAt = Date.now(); }
+
 function connect() {
-  const es = new EventSource("/api/events");
+  if (es) es.close();
+  es = new EventSource("/api/events");
   es.addEventListener("open", () => {
-    esErrors = 0;
+    touch();
     setConn("live", "Live");
   });
+  es.addEventListener("ping", touch);
   es.addEventListener("snapshot", (e) => {
+    touch();
     state.clear();
     for (const app of JSON.parse(e.data)) state.set(app.name, app);
     pending.forEach((_, name) => clearPending(name));
     render();
   });
   es.addEventListener("app", (e) => {
+    touch();
     const app = JSON.parse(e.data);
     state.set(app.name, app);
     clearPending(app.name);
     render();
   });
   es.addEventListener("delete", (e) => {
+    touch();
     state.delete(JSON.parse(e.data).name);
     render();
   });
   es.addEventListener("error", () => {
-    setConn("down", "Reconnecting");
-    // EventSource retries by itself. If it keeps failing, the OIDC session
-    // has likely expired and reconnects are being redirected to the identity
-    // provider (which EventSource can't follow) — reload the page to rerun
-    // the login flow.
-    if (++esErrors >= 4) {
-      fetch("/healthz", { redirect: "manual" })
-        .then((r) => { if (!r.ok) location.reload(); })
-        .catch(() => location.reload());
-      esErrors = 0;
-    }
+    setConn("down", "Connection lost");
+    // EventSource retries transient failures itself, but a reconnect that
+    // gets redirected to the identity provider is fatal to it (readyState
+    // CLOSED, no further retries) — probe right away instead of waiting for
+    // the watchdog.
+    if (es.readyState === EventSource.CLOSED) checkConnection();
   });
 }
+
+// checkConnection distinguishes a dead stream from an expired auth session:
+// if /healthz still answers, the stream is rebuilt in place; if the request
+// gets redirected (to the identity provider) the whole page reloads so the
+// browser re-runs the login flow. Network errors keep the banner up and let
+// the watchdog try again.
+async function checkConnection() {
+  if (probing) return;
+  probing = true;
+  try {
+    const resp = await fetch("/healthz", { redirect: "manual", cache: "no-store" });
+    if (resp.ok) {
+      touch();
+      connect();
+    } else {
+      location.reload();
+    }
+  } catch {
+    // server or network down — stay disconnected, watchdog retries
+  } finally {
+    probing = false;
+  }
+}
+
+// Watchdog for connections that die *silently* (proxy/NAT drops with no FIN):
+// no error event ever fires for those, the page just stops receiving pings.
+function watchdogCheck() {
+  if (es.readyState === EventSource.CLOSED || Date.now() - lastEventAt > STALE_AFTER_MS) {
+    setConn("down", "Connection lost");
+    checkConnection();
+  }
+}
+setInterval(watchdogCheck, 15000);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) watchdogCheck();
+});
 
 connect();
 setInterval(() => { // keep "Nm ago" labels fresh

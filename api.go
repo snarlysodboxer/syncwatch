@@ -61,7 +61,9 @@ func (s *Server) HandleEvents(w http.ResponseWriter, r *http.Request) {
 			}
 			flusher.Flush()
 		case <-keepalive.C:
-			if _, err := fmt.Fprint(w, ": keepalive\n\n"); err != nil {
+			// A real event, not an SSE comment: the browser uses these as a
+			// heartbeat to detect silently-dead connections.
+			if _, err := fmt.Fprint(w, "event: ping\ndata: {}\n\n"); err != nil {
 				return
 			}
 			flusher.Flush()

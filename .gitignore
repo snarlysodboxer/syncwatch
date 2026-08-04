@@ -1,3 +1,4 @@
 /syncwatch
 /result
 /.direnv
+/.predictable-yaml/.cache

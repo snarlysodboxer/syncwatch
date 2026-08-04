@@ -1,0 +1,14 @@
+---
+# Example environment overlay. Points at the envoy variant (swap for
+# ../../../apps/syncwatch/base to bring your own ingress) and sets the
+# environment-specific values.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../../../apps/syncwatch/envoy
+
+patches:
+- path: certificate.syncwatch-tls.yaml
+- path: httpRoute.syncwatch.yaml
+- path: securityPolicy.syncwatch-oidc.yaml

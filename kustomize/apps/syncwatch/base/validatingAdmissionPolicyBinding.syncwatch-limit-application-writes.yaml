@@ -1,0 +1,12 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: syncwatch-limit-application-writes
+  labels:
+    app.kubernetes.io/name: syncwatch
+    app.kubernetes.io/part-of: syncwatch
+spec:
+  policyName: syncwatch-limit-application-writes
+  validationActions:
+  - Deny

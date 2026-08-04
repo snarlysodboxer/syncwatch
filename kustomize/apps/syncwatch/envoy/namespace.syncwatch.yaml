@@ -1,0 +1,12 @@
+---
+# predictable-yaml: ignore-requireds
+# istio.io/dataplane-mode enrolls the namespace in Istio ambient mesh (pairs
+# with the AuthorizationPolicy). envoy-gateway/ingress-1 is an example of a
+# label your Gateway's allowedRoutes namespace selector may require.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: syncwatch
+  labels:
+    istio.io/dataplane-mode: ambient
+    envoy-gateway/ingress-1: allowed

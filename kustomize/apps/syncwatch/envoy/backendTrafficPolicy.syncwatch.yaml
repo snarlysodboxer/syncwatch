@@ -1,0 +1,23 @@
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: BackendTrafficPolicy
+metadata:
+  name: syncwatch
+  namespace: syncwatch
+  labels:
+    app.kubernetes.io/name: syncwatch
+    app.kubernetes.io/part-of: syncwatch
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: syncwatch
+  timeout:
+    http:
+      requestTimeout: 0s
+  # Merge with the gateway-wide default policy, overriding only the request
+  # timeout: the dashboard streams server-sent events, which are long-lived
+  # responses that the default 30s request timeout would cut. 0s disables the
+  # timeout; the 60s connection idle timeout still applies, and the app sends
+  # SSE keepalives every 25s to stay under it.
+  mergeType: StrategicMerge

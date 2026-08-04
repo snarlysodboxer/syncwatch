@@ -111,9 +111,43 @@ Two things to know:
 
 ## Deployment
 
-See [docs/kubernetes-deployment.md](docs/kubernetes-deployment.md) for the intended
-cluster setup: RBAC, an optional admission policy restricting SyncWatch's
-write access to just the auto-sync field, ingress, and OIDC.
+Ready-to-fork Kustomize manifests live in [`kustomize/`](kustomize/):
+
+- [`apps/syncwatch/base`](kustomize/apps/syncwatch/base) — the generic,
+  ingress-agnostic core: Namespace, Deployment (nonroot, read-only root
+  filesystem, tiny resource footprint), Service, RBAC (a Role in the
+  `argocd` namespace: get/list/watch/patch on Applications), and an
+  optional-but-recommended `ValidatingAdmissionPolicy` that rejects any
+  write from SyncWatch's ServiceAccount other than flipping
+  `spec.syncPolicy.automated.enabled` and setting its own annotations.
+- [`apps/syncwatch/envoy`](kustomize/apps/syncwatch/envoy) — pulls in the
+  base and adds Gateway API ingress: HTTPRoute, cert-manager Certificate +
+  ReferenceGrant, Envoy Gateway OIDC `SecurityPolicy` (+ OAuth client
+  Secret), a `BackendTrafficPolicy` disabling the request timeout (the SSE
+  stream is one long-lived response — a gateway-level request timeout cuts
+  it), and an Istio ambient `AuthorizationPolicy` restricting inbound
+  traffic to the gateway (delete it and the `istio.io` namespace label if
+  you don't run Istio). Using a different ingress or auth proxy? Compose
+  your own variant on `base` the same way.
+- [`overlays/prod/syncwatch`](kustomize/overlays/prod/syncwatch) — an
+  example environment overlay: picks the `envoy` variant and patches in the
+  hostname, certificate, and OIDC settings.
+
+To deploy: copy the example overlay, replace the `example.com` / `CHANGEME`
+values (real OAuth credentials belong in your secrets tooling — SOPS,
+sealed-secrets, external-secrets, ...), point the Deployment at an image
+you've built and pushed (`nix build` produces a static binary that runs
+`FROM scratch`: no CA bundle or writable filesystem needed, run as e.g.
+`USER 65534`), register the OIDC redirect URL on your OAuth client, and
+`kubectl apply -k` it — or point ArgoCD at it, which is rather fitting.
+
+After deploying: pause an unimportant app and confirm the row shows
+"paused by \<your email\>" — this proves the ID token reaches the app (see
+[Identity](#identity-who-paused-it) if it doesn't). Watch the pause appear
+live from a second browser, then check the annotations landed:
+`kubectl -n argocd get app <name> -o yaml | grep syncwatch`. To verify the
+admission policy, try an annotation write it should reject:
+`kubectl -n argocd annotate app <name> foo=bar --dry-run=server --as=system:serviceaccount:syncwatch:syncwatch`.
 
 ## License
 

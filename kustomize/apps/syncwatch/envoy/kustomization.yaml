@@ -1,0 +1,24 @@
+---
+# Envoy Gateway variant: the generic base plus Gateway API ingress with OIDC
+# authentication at the gateway, TLS via cert-manager, and an Istio ambient
+# AuthorizationPolicy locking inbound traffic to the gateway (remove
+# authorizationPolicy.syncwatch.yaml and the istio.io namespace label if you
+# don't run Istio).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- ../base
+- authorizationPolicy.syncwatch.yaml
+- backendTrafficPolicy.syncwatch.yaml
+- certificate.syncwatch-tls.yaml
+- httpRoute.syncwatch.yaml
+- referenceGrant.envoy-gateway-tls.yaml
+- secret.syncwatch-oauth.yaml
+- securityPolicy.syncwatch-oidc.yaml
+
+patches:
+- path: namespace.syncwatch.yaml
+
+transformers:
+- labelTransformer.add-argocd-label.yaml

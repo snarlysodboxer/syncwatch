@@ -1,0 +1,15 @@
+---
+# predictable-yaml: ignore-requireds
+# The redirect URL must be registered on the OAuth client. Set the real
+# clientID here (it pairs with the client-secret in the syncwatch-oauth
+# Secret, which you should manage with your usual secrets tooling).
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: syncwatch-oidc
+  namespace: syncwatch
+spec:
+  oidc:
+    clientID: CHANGEME
+    redirectURL: https://syncwatch.example.com/oauth2/callback
+    cookieDomain: example.com

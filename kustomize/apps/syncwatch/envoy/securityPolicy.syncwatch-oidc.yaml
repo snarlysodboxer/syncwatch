@@ -1,0 +1,33 @@
+---
+# OIDC authentication at the gateway (Envoy Gateway). SyncWatch has no auth
+# of its own; it reads the user's identity from the IdToken cookie this
+# policy forwards. The `email` scope is what puts the email claim in the ID
+# token. Register the redirect URL on your OAuth client.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: SecurityPolicy
+metadata:
+  name: syncwatch-oidc
+  namespace: syncwatch
+  labels:
+    app.kubernetes.io/name: syncwatch
+    app.kubernetes.io/part-of: syncwatch
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: syncwatch
+  oidc:
+    provider:
+      issuer: https://accounts.google.com
+    clientID: CHANGEME
+    clientSecret:
+      name: syncwatch-oauth
+    redirectURL: CHANGEME
+    cookieDomain: CHANGEME
+    scopes:
+    - openid
+    - email
+    - profile
+    refreshToken: true
+    defaultTokenTTL: 48h
+    defaultRefreshTokenTTL: 168h

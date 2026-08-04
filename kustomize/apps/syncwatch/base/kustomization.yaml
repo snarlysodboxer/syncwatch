@@ -1,0 +1,19 @@
+---
+# Generic, ingress-agnostic deployment of SyncWatch: everything it needs to
+# run except the authenticating reverse proxy in front of it. Compose with
+# ../envoy (Gateway API + Envoy Gateway OIDC) or your own ingress variant.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- deployment.syncwatch.yaml
+- namespace.syncwatch.yaml
+- role.syncwatch.yaml
+- roleBinding.syncwatch.yaml
+- service.syncwatch.yaml
+- serviceAccount.syncwatch.yaml
+- validatingAdmissionPolicy.syncwatch-limit-application-writes.yaml
+- validatingAdmissionPolicyBinding.syncwatch-limit-application-writes.yaml
+
+transformers:
+- labelTransformer.add-argocd-label.yaml

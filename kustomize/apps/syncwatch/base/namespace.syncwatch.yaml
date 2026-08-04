@@ -1,0 +1,8 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: syncwatch
+  labels:
+    app.kubernetes.io/name: syncwatch
+    app.kubernetes.io/part-of: syncwatch

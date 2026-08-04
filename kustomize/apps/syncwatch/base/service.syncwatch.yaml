@@ -1,0 +1,19 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: syncwatch
+  namespace: syncwatch
+  labels:
+    app.kubernetes.io/name: syncwatch
+    app.kubernetes.io/part-of: syncwatch
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: syncwatch
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+    protocol: TCP
+    appProtocol: http

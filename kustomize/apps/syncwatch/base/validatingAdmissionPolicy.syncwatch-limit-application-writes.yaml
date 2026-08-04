@@ -1,0 +1,57 @@
+---
+# Kubernetes RBAC cannot restrict which fields a patch may touch, so this
+# policy rejects any Application update from the syncwatch ServiceAccount
+# that changes anything other than spec.syncPolicy.automated.enabled and
+# snarlysodboxer.github.io/syncwatch-* annotations.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: syncwatch-limit-application-writes
+  labels:
+    app.kubernetes.io/name: syncwatch
+    app.kubernetes.io/part-of: syncwatch
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:
+      - argoproj.io
+      apiVersions:
+      - v1alpha1
+      resources:
+      - applications
+      operations:
+      - UPDATE
+  matchConditions:
+  - name: only-syncwatch-requests
+    expression: request.userInfo.username == 'system:serviceaccount:syncwatch:syncwatch'
+  validations:
+  - message: "syncwatch may only change spec.syncPolicy.automated.enabled"
+    expression: |
+      object.spec.project == oldObject.spec.project &&
+      object.spec.?source == oldObject.spec.?source &&
+      object.spec.?sources == oldObject.spec.?sources &&
+      object.spec.destination == oldObject.spec.destination &&
+      object.spec.?ignoreDifferences == oldObject.spec.?ignoreDifferences &&
+      object.spec.?info == oldObject.spec.?info &&
+      object.spec.?revisionHistoryLimit == oldObject.spec.?revisionHistoryLimit &&
+      object.spec.?syncPolicy.?syncOptions == oldObject.spec.?syncPolicy.?syncOptions &&
+      object.spec.?syncPolicy.?retry == oldObject.spec.?syncPolicy.?retry &&
+      object.spec.?syncPolicy.?managedNamespaceMetadata == oldObject.spec.?syncPolicy.?managedNamespaceMetadata &&
+      object.spec.?syncPolicy.?automated.?prune == oldObject.spec.?syncPolicy.?automated.?prune &&
+      object.spec.?syncPolicy.?automated.?selfHeal == oldObject.spec.?syncPolicy.?automated.?selfHeal &&
+      object.spec.?syncPolicy.?automated.?allowEmpty == oldObject.spec.?syncPolicy.?automated.?allowEmpty &&
+      object.metadata.labels == oldObject.metadata.labels &&
+      object.metadata.?finalizers == oldObject.metadata.?finalizers
+  - message: "syncwatch may only set snarlysodboxer.github.io/syncwatch-* annotations"
+    # Two passes because CEL has no map union: annotations present on the new
+    # object must be unchanged (or prefixed), and annotations present on the
+    # old object must not have been removed (or be prefixed).
+    expression: |
+      object.metadata.?annotations.orValue({}).all(k,
+        k.startsWith('snarlysodboxer.github.io/syncwatch-') ||
+        (k in oldObject.metadata.?annotations.orValue({}) &&
+          object.metadata.annotations[k] == oldObject.metadata.annotations[k])) &&
+      oldObject.metadata.?annotations.orValue({}).all(k,
+        k.startsWith('snarlysodboxer.github.io/syncwatch-') ||
+        k in object.metadata.?annotations.orValue({}))

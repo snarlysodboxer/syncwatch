@@ -1,0 +1,22 @@
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: syncwatch
+  namespace: syncwatch
+  labels:
+    app.kubernetes.io/name: syncwatch
+    app.kubernetes.io/part-of: syncwatch
+spec:
+  action: ALLOW
+  rules:
+  # Only Envoy ingress may reach the dashboard. SyncWatch makes outbound
+  # calls to the Kubernetes API but receives nothing else.
+  - from:
+    - source:
+        namespaces:
+        - envoy-gateway-system
+    to:
+    - operation:
+        ports:
+        - "8080"

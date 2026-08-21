@@ -19,6 +19,8 @@ spec:
   oidc:
     provider:
       issuer: https://accounts.google.com
+      authorizationEndpoint: https://accounts.google.com/o/oauth2/v2/auth?access_type=offline&prompt=consent
+      tokenEndpoint: https://oauth2.googleapis.com/token
     clientID: CHANGEME
     clientSecret:
       name: syncwatch-oauth
@@ -29,5 +31,9 @@ spec:
     - email
     - profile
     refreshToken: true
+    # The default TTLs apply only when the token response omits an expiry.
+    # Google's ID/access tokens always carry one (1h), so defaultTokenTTL is
+    # moot; its refresh tokens carry none, so defaultRefreshTokenTTL is the
+    # effective session length.
     defaultTokenTTL: 48h
-    defaultRefreshTokenTTL: 168h
+    defaultRefreshTokenTTL: 168h  # 1 week

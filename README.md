@@ -34,14 +34,14 @@ updates live in every open browser - no refreshing.
   stamps `paused-at` and a best-effort `paused-by` (e.g. "the ArgoCD
   UI/CLI", derived from the field manager Kubernetes records in
   `metadata.managedFields`).
-- **Live updates** reach browsers over server-sent events (`/api/events`):
-  a `snapshot` event on connect, then `app` / `delete` events. `EventSource`
-  reconnects automatically; every reconnect re-sends the snapshot, so a
-  dropped stream self-heals. The server also sends a `ping` every 25s: a
-  watchdog treats missing pings as a dead connection (proxies can drop
-  streams without telling the browser), shows a banner, dims the stale data,
-  and probes the server — a dead stream is rebuilt in place, while an
-  expired auth session reloads the page back through the login flow.
+- **Live updates** reach browsers over server-sent events (`/api/events`): a
+  `snapshot` event on connect, then `app` / `delete` events. `EventSource`
+  reconnects automatically; every reconnect re-sends the snapshot, so a dropped
+  stream self-heals. The server also sends a `ping` every 25s: a watchdog treats
+  missing pings as a dead connection, shows a banner, dims the stale data, and
+  probes the server. A dead stream is rebuilt in place, while an expired auth
+  session reloads the page back through the login flow when the tab becomes
+  visible.
 - **Who paused it**: SyncWatch has no authentication of its own - it is
   designed to sit behind an authenticating proxy and records whatever
   identity the proxy forwards (see

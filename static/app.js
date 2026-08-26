@@ -327,13 +327,31 @@ async function checkConnection() {
       touch();
       connect();
     } else {
-      location.reload();
+      reloadThroughLogin();
     }
   } catch {
     // server or network down — stay disconnected, watchdog retries
   } finally {
     probing = false;
   }
+}
+
+// Reloading into the login flow only works if someone is there to finish it:
+// the identity provider's page holds a short-lived OAuth state, so a hidden
+// tab that reloads overnight parks on a sign-in page whose state is stale by
+// morning. Reload immediately only when the tab is visible; otherwise wait
+// for it to become visible again.
+let authExpired = false;
+
+function reloadThroughLogin() {
+  if (document.hidden) {
+    authExpired = true;
+    setConn("down", "Session expired");
+    document.querySelector(".stale-banner").textContent =
+      "Session expired — signing in again when you return to this tab.";
+    return;
+  }
+  location.reload();
 }
 
 // Watchdog for connections that die *silently* (proxy/NAT drops with no FIN):
@@ -346,7 +364,12 @@ function watchdogCheck() {
 }
 setInterval(watchdogCheck, 15000);
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) watchdogCheck();
+  if (document.hidden) return;
+  if (authExpired) {
+    location.reload();
+    return;
+  }
+  watchdogCheck();
 });
 
 connect();

@@ -11,6 +11,7 @@ const ICONS = {
   "pause-circle": { vb: "0 0 512 512", d: "M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8zm-16 328c0 8.8-7.2 16-16 16h-48c-8.8 0-16-7.2-16-16V176c0-8.8 7.2-16 16-16h48c8.8 0 16 7.2 16 16v160zm112 0c0 8.8-7.2 16-16 16h-48c-8.8 0-16-7.2-16-16V176c0-8.8 7.2-16 16-16h48c8.8 0 16 7.2 16 16v160z" },
   "ghost": { vb: "0 0 384 512", d: "M186.1.09C81.01 3.24 0 94.92 0 200.05v263.92c0 14.26 17.23 21.39 27.31 11.31l24.92-18.53c6.66-4.95 16-3.99 21.51 2.21l42.95 48.35c6.25 6.25 16.38 6.25 22.63 0l40.72-45.85c6.37-7.17 17.56-7.17 23.92 0l40.72 45.85c6.25 6.25 16.38 6.25 22.63 0l42.95-48.35c5.51-6.2 14.85-7.17 21.51-2.21l24.92 18.53c10.08 10.08 27.31 2.94 27.31-11.31V192C384 84 294.83-3.17 186.1.09zM128 224c-17.67 0-32-14.33-32-32s14.33-32 32-32 32 14.33 32 32-14.33 32-32 32zm128 0c-17.67 0-32-14.33-32-32s14.33-32 32-32 32 14.33 32 32-14.33 32-32 32z" },
   "question-circle": { vb: "0 0 512 512", d: "M504 256c0 136.997-111.043 248-248 248S8 392.997 8 256C8 119.083 119.043 8 256 8s248 111.083 248 248zM262.655 90c-54.497 0-89.255 22.957-116.549 63.758-3.536 5.286-2.353 12.415 2.715 16.258l34.699 26.31c5.205 3.947 12.621 3.008 16.665-2.122 17.864-22.658 30.113-35.797 57.303-35.797 20.429 0 45.698 13.148 45.698 32.958 0 14.976-12.363 22.667-32.534 33.976C247.128 238.528 216 254.941 216 296v4c0 6.627 5.373 12 12 12h56c6.627 0 12-5.373 12-12v-1.333c0-28.462 83.186-29.647 83.186-106.667 0-58.002-60.165-102-116.531-102zM256 338c-25.365 0-46 20.635-46 46 0 25.364 20.635 46 46 46s46-20.636 46-46c0-25.365-20.635-46-46-46z" },
+  "code-branch": { vb: "0 0 384 512", d: "M384 144c0-44.2-35.8-80-80-80s-80 35.8-80 80c0 36.4 24.3 67.1 57.5 76.8-.6 16.1-4.2 28.5-11 36.9-15.4 19.2-49.3 22.4-85.2 25.7-28.2 2.6-57.4 5.4-81.3 16.9v-144c32.5-10.2 56-40.5 56-76.3 0-44.2-35.8-80-80-80S0 35.8 0 80c0 35.8 23.5 66.1 56 76.3v199.3C23.5 365.9 0 396.2 0 432c0 44.2 35.8 80 80 80s80-35.8 80-80c0-34-21.2-63.1-51.2-74.6 3.1-5.2 7.8-9.8 14.9-13.4 16.2-8.2 40.4-10.4 66.1-12.8 42.2-3.9 90-8.4 118.2-43.4 14-17.4 21.1-39.8 21.6-67.9 31.6-10.8 54.4-40.7 54.4-75.9zM80 64c8.8 0 16 7.2 16 16s-7.2 16-16 16-16-7.2-16-16 7.2-16 16-16zm0 384c-8.8 0-16-7.2-16-16s7.2-16 16-16 16 7.2 16 16-7.2 16-16 16zm224-320c8.8 0 16 7.2 16 16s-7.2 16-16 16-16-7.2-16-16 7.2-16 16-16z" },
 };
 
 const SYNC_STATUS = {
@@ -32,6 +33,7 @@ const state = new Map(); // name -> app
 const rows = new Map();  // name -> {root, name, project, sync, health, note, meta, toggle}
 const pending = new Map(); // name -> timeout id
 let focusNoteFor = null;
+let argocdURL = ""; // from /api/config; empty when unconfigured
 
 const appsEl = document.getElementById("apps");
 const summaryEl = document.getElementById("summary");
@@ -63,11 +65,25 @@ function buildRow(app) {
   root.className = "app-row";
 
   const nameCell = document.createElement("div");
-  const nameEl = document.createElement("div");
+  nameCell.className = "name-cell";
+  // A link only when an ArgoCD URL is configured; otherwise plain text, so
+  // there is never a name that looks clickable but goes nowhere.
+  const nameEl = document.createElement(argocdURL ? "a" : "div");
   nameEl.className = "app-name";
-  const projectEl = document.createElement("div");
+  if (argocdURL) {
+    nameEl.href = `${argocdURL}/applications/${encodeURIComponent(app.name)}`;
+    nameEl.target = "_blank";
+    nameEl.rel = "noopener noreferrer";
+    nameEl.title = `open ${app.name} in ArgoCD`;
+  }
+  const subEl = document.createElement("div");
+  subEl.className = "app-sub";
+  const projectEl = document.createElement("span");
   projectEl.className = "app-project";
-  nameCell.append(nameEl, projectEl);
+  const revisionEl = document.createElement("span");
+  revisionEl.className = "app-revision";
+  subEl.append(projectEl, revisionEl);
+  nameCell.append(nameEl, subEl);
 
   const syncCell = document.createElement("div");
   const healthCell = document.createElement("div");
@@ -125,7 +141,7 @@ function buildRow(app) {
   });
 
   root.append(nameCell, syncCell, healthCell, noteCell, toggleCell);
-  return { root, name: nameEl, project: projectEl, sync: syncCell, health: healthCell, noteInput, noteMeta, noteNone, toggle, switchLabel };
+  return { root, name: nameEl, project: projectEl, revision: revisionEl, sync: syncCell, health: healthCell, noteInput, noteMeta, noteNone, toggle, switchLabel };
 }
 
 function updateRow(app) {
@@ -139,6 +155,12 @@ function updateRow(app) {
   row.root.classList.toggle("pending", pending.has(app.name));
   row.name.textContent = app.name;
   row.project.textContent = app.project;
+  row.revision.hidden = !app.revision;
+  if (app.revision) {
+    row.revision.innerHTML = svgIcon("code-branch") + `<span></span>`;
+    row.revision.lastChild.textContent = app.revision;
+    row.revision.title = `target revision: ${app.revision}`;
+  }
 
   setStatus(row.sync, SYNC_STATUS[app.sync] || SYNC_STATUS.Unknown, app.sync, app.syncing);
   setStatus(row.health, HEALTH_STATUS[app.health] || HEALTH_STATUS.Unknown, app.health, false);
@@ -149,11 +171,16 @@ function updateRow(app) {
   row.noteNone.hidden = showNote;
   if (showNote) {
     if (document.activeElement !== row.noteInput) row.noteInput.value = app.note || "";
+    // Space here is tight, so show just the local part of an email address
+    // and keep the full "paused by <who> at <when>" in the tooltip.
     const parts = [];
-    if (app.pausedBy) parts.push(`paused by ${app.pausedBy}`);
+    if (app.pausedBy) parts.push(app.pausedBy.replace(/@.*/, ""));
     if (app.pausedAt) parts.push(relTime(app.pausedAt));
     row.noteMeta.textContent = parts.join(" · ");
-    row.noteMeta.title = app.pausedAt || "";
+    row.noteMeta.title = [
+      app.pausedBy && `paused by ${app.pausedBy}`,
+      app.pausedAt && `at ${app.pausedAt}`,
+    ].filter(Boolean).join(" ");
   }
 
   row.toggle.checked = app.autoSync;
@@ -357,6 +384,7 @@ function reloadThroughLogin() {
 // Watchdog for connections that die *silently* (proxy/NAT drops with no FIN):
 // no error event ever fires for those, the page just stops receiving pings.
 function watchdogCheck() {
+  if (!es) return; // still fetching config; connect() hasn't run yet
   if (es.readyState === EventSource.CLOSED || Date.now() - lastEventAt > STALE_AFTER_MS) {
     setConn("down", "Connection lost");
     checkConnection();
@@ -372,7 +400,15 @@ document.addEventListener("visibilitychange", () => {
   watchdogCheck();
 });
 
-connect();
+// Load the config before opening the stream so the first rows built already
+// know whether app names should be ArgoCD links. A failure here is not fatal:
+// the dashboard still works, the names just aren't linked.
+fetch("/api/config", { cache: "no-store" })
+  .then((resp) => resp.ok ? resp.json() : null)
+  .then((cfg) => { argocdURL = cfg?.argocdURL || ""; })
+  .catch(() => {})
+  .finally(connect);
+
 setInterval(() => { // keep "Nm ago" labels fresh
   if (!(document.activeElement && appsEl.contains(document.activeElement))) render();
 }, 60000);

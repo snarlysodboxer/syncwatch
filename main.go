@@ -15,8 +15,10 @@ import (
 	"io/fs"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -35,6 +37,7 @@ func main() {
 		kubeconfig     = flag.String("kubeconfig", "", "path to a kubeconfig file (default: in-cluster config, falling back to $KUBECONFIG / ~/.kube/config)")
 		devUser        = flag.String("dev-user", "", "identity to record for actions when the auth proxy provides none (default: $USER when running outside the cluster)")
 		demo           = flag.Bool("demo", false, "serve fake data instead of connecting to a cluster (for UI development)")
+		argoCDURL      = flag.String("argocd-url", "", "base URL of the ArgoCD UI (e.g. https://argocd.example.com); when set, application names link to it")
 		identityHeader = flag.String("identity-header", "", "request header the auth proxy forwards the user's identity in, plaintext or JWT (e.g. X-Forwarded-Email, Authorization); checked before --identity-cookie")
 		identityCookie = flag.String("identity-cookie", "IdToken", "name prefix of cookies holding an OIDC ID token JWT (default matches Envoy Gateway's IdToken-<suffix>); empty disables")
 		identityClaim  = flag.String("identity-claim", "email", "JWT claim recorded as the acting user")
@@ -43,6 +46,12 @@ func main() {
 
 	logger := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	slog.SetDefault(logger)
+
+	argoBase, err := normalizeArgoCDURL(*argoCDURL)
+	if err != nil {
+		slog.Error("invalid --argocd-url", "value", *argoCDURL, "error", err)
+		os.Exit(1)
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -79,7 +88,7 @@ func main() {
 		patcher = k8sPatcher
 	}
 
-	server := &Server{Store: store, Hub: hub, Patcher: patcher, Identity: IdentityConfig{
+	server := &Server{Store: store, Hub: hub, Patcher: patcher, ArgoCDURL: argoBase, Identity: IdentityConfig{
 		Header:       *identityHeader,
 		CookiePrefix: *identityCookie,
 		Claim:        *identityClaim,
@@ -95,6 +104,7 @@ func main() {
 	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "ok")
 	})
+	mux.HandleFunc("GET /api/config", server.HandleConfig)
 	mux.HandleFunc("GET /api/events", server.HandleEvents)
 	mux.HandleFunc("POST /api/apps/{name}/autosync", server.HandleAutoSync)
 	mux.HandleFunc("POST /api/apps/{name}/note", server.HandleNote)
@@ -107,11 +117,34 @@ func main() {
 		httpServer.Shutdown(shutdownCtx)
 	}()
 
-	slog.Info("serving", "listen", *listen, "namespace", *namespace, "demo", *demo)
+	slog.Info("serving", "listen", *listen, "namespace", *namespace, "demo", *demo, "argocdURL", argoBase)
 	if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		slog.Error("http server failed", "error", err)
 		os.Exit(1)
 	}
+}
+
+// normalizeArgoCDURL validates the configured ArgoCD base URL and strips any
+// trailing slash so application links can be built by simple concatenation.
+// The scheme is checked because this value ends up in an href: rejecting
+// anything but http(s) at startup keeps a typo from becoming a javascript:
+// link on every row.
+func normalizeArgoCDURL(raw string) (string, error) {
+	if raw == "" {
+		return "", nil
+	}
+	u, err := url.Parse(raw)
+	if err != nil {
+		return "", err
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return "", fmt.Errorf("scheme must be http or https, got %q", u.Scheme)
+	}
+	if u.Host == "" {
+		return "", errors.New("missing host")
+	}
+
+	return strings.TrimRight(u.String(), "/"), nil
 }
 
 // loadRESTConfig returns a Kubernetes REST config, preferring an explicit

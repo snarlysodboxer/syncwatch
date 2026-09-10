@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -35,7 +36,10 @@ const (
 
 // AppView is the per-application state shown in the UI.
 type AppView struct {
-	Name     string `json:"name"`
+	Name string `json:"name"`
+	// Revision is the target revision when it is worth showing, i.e. anything
+	// other than the default branch. Empty when the app tracks a default.
+	Revision string `json:"revision"`
 	Project  string `json:"project"`
 	Sync     string `json:"sync"`   // Synced | OutOfSync | Unknown
 	Health   string `json:"health"` // Healthy | Progressing | Degraded | Suspended | Missing | Unknown
@@ -209,10 +213,11 @@ func StartWatch(ctx context.Context, client dynamic.Interface, namespace string,
 
 func parseApp(u *unstructured.Unstructured) AppView {
 	app := AppView{
-		Name:    u.GetName(),
-		Sync:    "Unknown",
-		Health:  "Unknown",
-		Project: nestedString(u, "spec", "project"),
+		Name:     u.GetName(),
+		Sync:     "Unknown",
+		Health:   "Unknown",
+		Project:  nestedString(u, "spec", "project"),
+		Revision: targetRevision(u),
 	}
 	if s := nestedString(u, "status", "sync", "status"); s != "" {
 		app.Sync = s
@@ -243,6 +248,38 @@ func parseApp(u *unstructured.Unstructured) AppView {
 func nestedString(u *unstructured.Unstructured, fields ...string) string {
 	s, _, _ := unstructured.NestedString(u.Object, fields...)
 	return s
+}
+
+// defaultRevisions are the target revisions not worth showing: tracking the
+// default branch is the norm, so calling it out on every row is just noise.
+var defaultRevisions = map[string]bool{"": true, "main": true, "master": true, "HEAD": true}
+
+// targetRevision returns the app's target revision, or "" when every source
+// tracks a default branch. Apps have either one spec.source or, when
+// multi-source, a spec.sources list; distinct non-default revisions across
+// sources are joined so none of them is silently hidden.
+func targetRevision(u *unstructured.Unstructured) string {
+	revs := []string{nestedString(u, "spec", "source", "targetRevision")}
+	if sources, found, _ := unstructured.NestedSlice(u.Object, "spec", "sources"); found {
+		revs = revs[:0]
+		for _, s := range sources {
+			source, ok := s.(map[string]any)
+			if !ok {
+				continue
+			}
+			rev, _ := source["targetRevision"].(string)
+			revs = append(revs, rev)
+		}
+	}
+
+	var out []string
+	for _, rev := range revs {
+		if defaultRevisions[rev] || slices.Contains(out, rev) {
+			continue
+		}
+		out = append(out, rev)
+	}
+	return strings.Join(out, ", ")
 }
 
 // reconcilePauseMeta keeps the pause annotations truthful when auto-sync is

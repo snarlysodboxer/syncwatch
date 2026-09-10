@@ -10,5 +10,6 @@ resources:
 
 patches:
 - path: certificate.syncwatch-tls.yaml
+- path: deployment.syncwatch.yaml
 - path: httpRoute.syncwatch.yaml
 - path: securityPolicy.syncwatch-oidc.yaml

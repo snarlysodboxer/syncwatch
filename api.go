@@ -22,10 +22,21 @@ type Patcher interface {
 
 // Server holds the dependencies of the HTTP handlers.
 type Server struct {
-	Store    *Store
-	Hub      *Hub
-	Patcher  Patcher
-	Identity IdentityConfig
+	Store *Store
+	Hub   *Hub
+	// ArgoCDURL is the ArgoCD UI base URL, without a trailing slash, or ""
+	// when unconfigured.
+	ArgoCDURL string
+	Patcher   Patcher
+	Identity  IdentityConfig
+}
+
+// HandleConfig serves the settings the page needs at load time. It is a
+// separate endpoint rather than part of the event stream because it never
+// changes while the process runs.
+func (s *Server) HandleConfig(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"argocdURL": s.ArgoCDURL})
 }
 
 // HandleEvents streams the application list and subsequent changes as

@@ -15,12 +15,12 @@ func startDemo(ctx context.Context, store *Store, devUser string) Patcher {
 	seed := []AppView{
 		{Name: "alloy", Project: "demo", Sync: "Synced", Health: "Healthy", AutoSync: false, Prune: true, SelfHeal: true, Note: "tuning log pipeline (da)", PausedBy: devUser, PausedAt: "2026-07-24T09:15:00Z"},
 		{Name: "argocd", Project: "demo", Sync: "Synced", Health: "Healthy", AutoSync: true, Prune: true, SelfHeal: true},
-		{Name: "cert-manager", Project: "demo", Sync: "OutOfSync", Health: "Healthy", AutoSync: false, Prune: true, SelfHeal: true, PausedBy: devUser, PausedAt: "2026-07-25T18:40:00Z"},
+		{Name: "cert-manager", Project: "demo", Revision: "fix-acme-solver", Sync: "OutOfSync", Health: "Healthy", AutoSync: false, Prune: true, SelfHeal: true, PausedBy: devUser, PausedAt: "2026-07-25T18:40:00Z"},
 		{Name: "envoy-gateway", Project: "demo", Sync: "Synced", Health: "Healthy", AutoSync: true, Prune: true, SelfHeal: true},
 		{Name: "grafana", Project: "demo", Sync: "OutOfSync", Health: "Progressing", Syncing: true, AutoSync: true, Prune: true, SelfHeal: true},
 		{Name: "istio", Project: "demo", Sync: "Synced", Health: "Degraded", AutoSync: true, Prune: true, SelfHeal: true},
 		{Name: "kiali", Project: "demo", Sync: "Unknown", Health: "Unknown", AutoSync: true},
-		{Name: "loki", Project: "demo", Sync: "Synced", Health: "Suspended", AutoSync: true, Prune: true},
+		{Name: "loki", Project: "demo", Revision: "9f2c1ab", Sync: "Synced", Health: "Suspended", AutoSync: true, Prune: true},
 		{Name: "mimir", Project: "demo", Sync: "OutOfSync", Health: "Missing", AutoSync: false, Note: "improving RBAC (jl)", PausedBy: "jane@example.com", PausedAt: "2026-07-20T14:00:00Z"},
 		{Name: "team-access", Project: "demo", Sync: "Synced", Health: "Healthy", AutoSync: true, Prune: true, SelfHeal: true},
 	}

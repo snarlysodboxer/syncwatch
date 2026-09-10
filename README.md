@@ -34,6 +34,14 @@ updates live in every open browser - no refreshing.
   stamps `paused-at` and a best-effort `paused-by` (e.g. "the ArgoCD
   UI/CLI", derived from the field manager Kubernetes records in
   `metadata.managedFields`).
+- **Target revision, only when it matters.** A row shows the app's
+  `targetRevision` only when it is *not* a default branch (`main`, `master`,
+  `HEAD`, unset) - so a branch or pinned commit stands out instead of every
+  row carrying the same noise. Multi-source apps (`spec.sources`) show each
+  distinct non-default revision.
+- **Names link to ArgoCD.** Set `--argocd-url https://argocd.example.com` and
+  each application name becomes a link to that app in the ArgoCD UI, opening
+  in a new tab. Unset, the names are plain text.
 - **Live updates** reach browsers over server-sent events (`/api/events`): a
   `snapshot` event on connect, then `app` / `delete` events. `EventSource`
   reconnects automatically; every reconnect re-sends the snapshot, so a dropped
@@ -65,6 +73,7 @@ go run . -h            # all flags
 | Route | Description |
 | --- | --- |
 | `GET /` | the dashboard |
+| `GET /api/config` | page settings that never change at runtime (`argocdURL`) |
 | `GET /api/events` | SSE stream: `snapshot`, then `app` / `delete` events |
 | `POST /api/apps/{name}/autosync` | `{"enabled": bool, "note": "..."}` |
 | `POST /api/apps/{name}/note` | `{"note": "..."}` (empty clears) |

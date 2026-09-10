@@ -1,0 +1,15 @@
+---
+# predictable-yaml: ignore-requireds
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: syncwatch
+  namespace: syncwatch
+spec:
+  template:
+    spec:
+      containers:
+      - name: syncwatch
+        args:
+        - --namespace=argocd
+        - --argocd-url=https://argocd.example.com
